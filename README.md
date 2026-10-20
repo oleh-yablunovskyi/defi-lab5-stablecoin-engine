@@ -109,10 +109,11 @@ and the borrower pays no gas.
 
 ## Notes
 
-- `setMockOraclePrice` has no access control, as in the lab text: any account can change the
-  price. It stands in for an oracle in the simulation; a real protocol reads a price feed.
+- `setMockOraclePrice` has no access control, as in the code figure of the lab text: any account
+  can change the price. It stands in for an oracle in the simulation; a real protocol reads a
+  price feed.
 - There is no liquidation. A position whose health factor falls below 1.0 after a price drop can
-  neither mint nor withdraw, but nobody can close it.
+  neither mint nor withdraw, but nobody can liquidate it.
 - `burnStablecoin` needs no `approve`: the engine owns the coin and burns from the caller's
   balance.
 - `withdrawCollateral` checks the health factor after reducing the collateral and sends the ETH
