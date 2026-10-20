@@ -1,0 +1,26 @@
+{
+  "name": "defi-lab5-stablecoin-lending",
+  "version": "1.0.0",
+  "description": "DeFi lab 5: an over-collateralized lending engine that takes ETH as collateral and mints a USD stablecoin, run on a local Hardhat node",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.6.1"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^4.2.1",
+    "@nomicfoundation/hardhat-ignition": "^3.1.9",
+    "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^4.0.0",
+    "@types/chai": "^5.2.3",
+    "@types/chai-as-promised": "^8.0.2",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.20.5",
+    "chai": "^6.3.0",
+    "ethers": "^6.17.0",
+    "forge-std": "github:foundry-rs/forge-std#v1.16.2",
+    "hardhat": "^3.20.0",
+    "mocha": "^12.0.3",
+    "typescript": "~6.0.3"
+  }
+}
