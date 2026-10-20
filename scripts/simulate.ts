@@ -16,6 +16,8 @@ const { formatEther, parseEther } = ethers;
 const DEPOSIT = parseEther("2"); // ETH
 const WITHDRAW = parseEther("1"); // ETH
 const ONE = 10n ** 18n; // 1.0 with 18 decimals, the scale of the health factor
+// The message of the require in _revertIfHealthFactorIsBroken
+const HEALTH_FACTOR_BROKEN = "Health factor is broken (under 1.0)";
 
 const deploymentFile = `deployments/${networkName}.json`;
 if (!existsSync(deploymentFile)) {
@@ -33,11 +35,15 @@ const symbol = await coin.symbol();
 const ratio = await engine.COLLATERAL_RATIO();
 
 // The node answers a reverted call with the ABI-encoded revert data in `error.data`:
-// Error(string) for a require with a message, or a custom error of the contract
+// Error(string) for a require with a message, or a custom error of the contract.
+// An error without revert data is not a revert (a network problem or a bug in the script).
 function revertReason(error: unknown, contract: BaseContract): string {
   const data = (error as { data?: unknown }).data;
-  const parsed = typeof data === "string" ? contract.interface.parseError(data) : null;
-  if (parsed === null) throw error; // not a revert: a network problem or a bug in the script
+  if (typeof data !== "string") throw error;
+  // a revert without a reason, e.g. a require without a message, returns no selector
+  if (data.length < 10) return `no reason (revert data ${data})`;
+  const parsed = contract.interface.parseError(data);
+  if (parsed === null) return `an unknown error ${data.slice(0, 10)}`;
   return parsed.name === "Error" ? `"${parsed.args[0]}"` : `${parsed.name}(${parsed.args.join(", ")})`;
 }
 
@@ -136,8 +142,14 @@ try {
   console.log("Захист НЕ спрацював: застава знята, хоча фактор здоров'я впав нижче 1.0");
   process.exitCode = 1;
 } catch (error) {
-  console.log(`[Revert] withdrawCollateral(${formatEther(WITHDRAW)} ETH) reverted with ${revertReason(error, engine)}`);
-  console.log(`Захист спрацював успішно: зняття ${formatEther(WITHDRAW)} ETH відхилено, бо фактор здоров'я впав би до ${formatEther(healthFactorLeft)} (< 1.0)`);
+  const reason = revertReason(error, engine);
+  console.log(`[Revert] withdrawCollateral(${formatEther(WITHDRAW)} ETH) reverted with ${reason}`);
+  if (reason === `"${HEALTH_FACTOR_BROKEN}"`) {
+    console.log(`Захист спрацював успішно: зняття ${formatEther(WITHDRAW)} ETH відхилено, бо фактор здоров'я впав би до ${formatEther(healthFactorLeft)} (< 1.0)`);
+  } else {
+    console.log("Неочікуваний відкат: зняття відхилено не перевіркою фактора здоров'я");
+    process.exitCode = 1;
+  }
 }
 await position();
 const ethAfter = await ethers.provider.getBalance(borrower);
