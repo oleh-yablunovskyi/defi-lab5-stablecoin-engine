@@ -16,6 +16,8 @@ contract StableEngine {
 
     event CollateralDeposited(address indexed user, uint256 amount);
     event StablecoinMinted(address indexed user, uint256 amount);
+    event StablecoinBurned(address indexed user, uint256 amount);
+    event CollateralWithdrawn(address indexed user, uint256 amount);
 
     constructor(address _sUsdAddress) {
         sUsd = StableCoin(_sUsdAddress);
@@ -37,6 +39,37 @@ contract StableEngine {
 
         sUsd.mint(msg.sender, _sUsdAmount);
         emit StablecoinMinted(msg.sender, _sUsdAmount);
+    }
+
+    // Control task 2a: the user returns part of the minted stablecoins, they are burned and
+    // the debt goes down by the same amount
+    function burnStablecoin(uint256 amount) external {
+        require(amount > 0, "Needs more than 0");
+        require(sUsdMinted[msg.sender] >= amount, "Burning more than minted");
+
+        sUsdMinted[msg.sender] -= amount;
+
+        // The engine owns the stablecoin, so it burns the user's tokens without an approve
+        sUsd.burn(msg.sender, amount);
+        emit StablecoinBurned(msg.sender, amount);
+    }
+
+    // Control task 2b: the user takes part of the ETH collateral back to the wallet
+    function withdrawCollateral(uint256 amount) external {
+        require(amount > 0, "Needs more than 0");
+        require(collateralDeposited[msg.sender] >= amount, "Insufficient collateral");
+
+        collateralDeposited[msg.sender] -= amount;
+
+        // Less collateral can make the position unsafe: a broken health factor reverts the
+        // whole transaction, together with the line above
+        _revertIfHealthFactorIsBroken(msg.sender);
+        emit CollateralWithdrawn(msg.sender, amount);
+
+        // Checks-effects-interactions: the ETH leaves the contract only after all checks
+        // and state changes
+        (bool ok, ) = msg.sender.call{value: amount}("");
+        require(ok, "ETH transfer failed");
     }
 
     // 3. Market price change (only for the simulation in the lab)
